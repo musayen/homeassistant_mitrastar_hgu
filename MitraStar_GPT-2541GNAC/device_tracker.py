@@ -71,7 +71,6 @@ class MitraStarDeviceScanner(DeviceScanner):
         self._update_info()
         return self.last_results
 
-
     def get_device_name(self, device):
         """Get the device name from the router DHCP table."""
         match = [element[0] for element in self.dhcp_data if element[1].lower()==device]
@@ -80,6 +79,20 @@ class MitraStarDeviceScanner(DeviceScanner):
         else:
             device_name =  None
         return device_name
+
+    def get_extra_attributes(self, device):
+        """Get the device ip from the router DHCP table."""
+        match = [element for element in self.dhcp_data if element[1].lower()==device]
+        extra_attributes = {
+          "ip": "unknown",
+          "mac": "unknown"
+        }
+        if len(match) > 0:
+            # match[0] is an array of [0]name, [1]mac, [2]ip
+            extra_attributes["mac"] = match[0][1]
+            extra_attributes["ip"] = match[0][2]
+        
+        return extra_attributes
 
     def _update_info(self):
         """Ensure the information from the MitraStar router is up to date.
@@ -146,13 +159,14 @@ class MitraStarDeviceScanner(DeviceScanner):
 
             # Read DHCP table to store hostnames and IP addresses of hosts
             dhcp_url = 'http://{}/dhcpinfo.html'.format(self.host)
-            url_result = self._read_table(session1, dhcp_url).replace('\n ','').replace(' ','')
+            url_result = self._read_table(session1, dhcp_url).replace('\n ','').replace(' ','').replace('_','-')
             dhcp_data = self.parse_dhcp.findall(url_result)
 
-            _LOGGER.info('MitraStar GPT-2541GNAC found %d devices' %len(mac_array))
+            _LOGGER.debug('MitraStar GPT-2541GNAC found %d devices' %len(mac_array))
 
         else:
             mac_array = None
             _LOGGER.error('Error connecting to the router...')
 
         return mac_array, dhcp_data
+
